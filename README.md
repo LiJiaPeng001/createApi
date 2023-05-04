@@ -1,3 +1,5 @@
-## starter-ts
+# axios
 
-库的原始包
+## feature
+- 支持取消请求
+- 支持重新请求
