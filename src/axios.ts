@@ -1,17 +1,15 @@
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, CancelTokenSource, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
-
-let source: CancelTokenSource | undefined
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import type { ConditionConfig, CreateApiOption, Result } from './types/index'
+import { AxiosCanceler } from './axiosCancel'
 
 export class VAxios {
   private axiosInstance: AxiosInstance
-  public retryCount: number
-  public readonly retryDelay: number
+  public options: CreateApiOption
 
-  constructor(options: AxiosRequestConfig) {
-    this.axiosInstance = axios.create(options)
-    this.retryCount = 2
-    this.retryDelay = 100
+  constructor(options: CreateApiOption) {
+    this.options = options
+    this.axiosInstance = axios.create(options.createOptions)
     this.setupInterceptors()
   }
 
@@ -19,14 +17,19 @@ export class VAxios {
    * @desc 拦截器配置
    */
   private setupInterceptors() {
+    const axiosCanceler = new AxiosCanceler()
+
     this.axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-      // !ignoreCancelToken && axiosCanceler.addPending(config)
-      // 设置token
+      if (this.options.beforeRequest)
+        config = this.options.beforeRequest<InternalAxiosRequestConfig>(config)
+      axiosCanceler.addPending(config)
       return config
     }, undefined)
     this.axiosInstance.interceptors.response.use((res: AxiosResponse<any>) => {
       // 设置取消请求
-      // res && axiosCanceler.removePending(res.config)
+      res && axiosCanceler.removePending(res.config)
+      if (this.options.afterResponse)
+        res = this.options.afterResponse<AxiosResponse<any>>(res)
       return res
     }, undefined)
   }
@@ -36,27 +39,31 @@ export class VAxios {
    * @param config 请求配置
    * @returns Promise<AxiosResponse<T>>
    */
-  async request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  async request<T = any>(config: AxiosRequestConfig, condition?: ConditionConfig): Promise<T> {
+    const { shouldLoading } = condition as ConditionConfig
+    const { loading, toast, retryCount, retryDelay } = this.options
     let retry = 0
 
-    const sendRequest = async (): Promise<AxiosResponse<T>> => {
+    const sendRequest = async (): Promise<T> => {
       try {
-        source = axios.CancelToken.source()
-        config.cancelToken = source.token
+        if (shouldLoading)
+          loading.show()
 
-        const response = await this.axiosInstance.request<T>(config)
-
-        return response
+        const res = await this.axiosInstance.request<any, AxiosResponse<Result>>(config)
+        if (shouldLoading)
+          loading.hide()
+        return res as unknown as Promise<T>
       }
       catch (error) {
+        toast(error)
         if (axios.isCancel(error)) {
-          console.log('Request canceled:', error.message)
+          console.error('Request canceled:', error.message)
           throw error
         }
 
-        if (retry < this.retryCount) {
+        if (retry < retryCount) {
           retry++
-          await new Promise(resolve => setTimeout(resolve, this.retryDelay))
+          await new Promise(resolve => setTimeout(resolve, retryDelay))
           return sendRequest()
         }
 
@@ -67,12 +74,19 @@ export class VAxios {
     return sendRequest()
   }
 
-  /**
-   * 取消请求
-   * @param message 取消原因
-   */
-  cancelRequest(message?: string): void {
-    if (source)
-      source.cancel(message)
+  get<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+    return this.request({ ...config, method: 'GET' }, options)
+  }
+
+  post<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+    return this.request({ ...config, method: 'POST' }, options)
+  }
+
+  put<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+    return this.request({ ...config, method: 'PUT' }, options)
+  }
+
+  delete<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+    return this.request({ ...config, method: 'DELETE' }, options)
   }
 }
