@@ -1,5 +1,10 @@
 import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import type {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from 'axios'
 import type { ConditionConfig, CreateApiOption, Result } from './types/index'
 import { AxiosCanceler } from './axiosCancel'
 
@@ -19,12 +24,17 @@ export class VAxios {
   private setupInterceptors() {
     const axiosCanceler = new AxiosCanceler()
 
-    this.axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-      if (this.options.beforeRequest)
-        config = this.options.beforeRequest<InternalAxiosRequestConfig>(config)
-      axiosCanceler.addPending(config)
-      return config
-    }, undefined)
+    this.axiosInstance.interceptors.request.use(
+      (config: InternalAxiosRequestConfig) => {
+        if (this.options.beforeRequest) {
+          config
+            = this.options.beforeRequest<InternalAxiosRequestConfig>(config)
+        }
+        axiosCanceler.addPending(config)
+        return config
+      },
+      undefined,
+    )
     this.axiosInstance.interceptors.response.use((res: AxiosResponse<any>) => {
       // 设置取消请求
       res && axiosCanceler.removePending(res.config)
@@ -39,7 +49,10 @@ export class VAxios {
    * @param config 请求配置
    * @returns Promise<AxiosResponse<T>>
    */
-  async request<T = any>(config: AxiosRequestConfig, condition?: ConditionConfig): Promise<T> {
+  async request<T = any>(
+    config: AxiosRequestConfig,
+    condition?: ConditionConfig,
+  ): Promise<T> {
     const { shouldLoading } = condition as ConditionConfig
     const { loading, toast, retryCount, retryDelay } = this.options
     let retry = 0
@@ -49,7 +62,10 @@ export class VAxios {
         if (shouldLoading)
           loading.show()
 
-        const res = await this.axiosInstance.request<any, AxiosResponse<Result>>(config)
+        const res = await this.axiosInstance.request<
+          any,
+          AxiosResponse<Result>
+        >(config)
         if (shouldLoading)
           loading.hide()
         return res as unknown as Promise<T>
@@ -74,19 +90,31 @@ export class VAxios {
     return sendRequest()
   }
 
-  get<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+  get<T = any>(
+    config: AxiosRequestConfig,
+    options?: ConditionConfig,
+  ): Promise<T> {
     return this.request({ ...config, method: 'GET' }, options)
   }
 
-  post<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+  post<T = any>(
+    config: AxiosRequestConfig,
+    options?: ConditionConfig,
+  ): Promise<T> {
     return this.request({ ...config, method: 'POST' }, options)
   }
 
-  put<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+  put<T = any>(
+    config: AxiosRequestConfig,
+    options?: ConditionConfig,
+  ): Promise<T> {
     return this.request({ ...config, method: 'PUT' }, options)
   }
 
-  delete<T = any>(config: AxiosRequestConfig, options?: ConditionConfig): Promise<T> {
+  delete<T = any>(
+    config: AxiosRequestConfig,
+    options?: ConditionConfig,
+  ): Promise<T> {
     return this.request({ ...config, method: 'DELETE' }, options)
   }
 }

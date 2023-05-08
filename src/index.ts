@@ -1,7 +1,5 @@
 import { VAxios } from './axios'
 
-function noop() {}
-
 function createApi() {
   return new VAxios({
     retryCount: 2,
@@ -12,8 +10,6 @@ function createApi() {
         'Content-Type': 'application/json',
       },
     },
-    toast: noop,
-    loading: noop,
   })
 }
 
