@@ -1,5 +1,11 @@
-# axios
+# Axios CreateApi
 
-## feature
+## Feature
 - 支持取消请求
-- 支持重新请求
+- 支持二次请求
+
+## Use
+
+```bash
+git clone 
+```
