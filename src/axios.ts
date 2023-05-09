@@ -53,15 +53,18 @@ export class VAxios {
     config: AxiosRequestConfig,
     condition?: ConditionConfig,
   ): Promise<T> {
-    const { shouldLoading } = condition as ConditionConfig
-    const { loading, toast, retryCount, retryDelay } = this.options
+    const {
+      shouldLoading,
+      retryCount = 2,
+      retryDelay = 100,
+    } = condition as ConditionConfig
+    const { loading, toast } = this.options
     let retry = 0
 
     const sendRequest = async (): Promise<T> => {
       try {
         if (shouldLoading)
           loading.show()
-
         const res = await this.axiosInstance.request<
           any,
           AxiosResponse<Result>
